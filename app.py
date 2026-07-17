@@ -149,7 +149,7 @@ if "history" not in st.session_state:
 # ----------------------------
 # User Input (wrapped in a form so pressing Enter submits it)
 # ----------------------------
-with st.form(key="emotion_form"):
+with st.form(key="emotion_form", border=False):
     user_input = st.text_input(
         "Enter your sentence",
         placeholder="e.g. I am so happy today!"
