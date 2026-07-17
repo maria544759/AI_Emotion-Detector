@@ -1,42 +1,40 @@
 import streamlit as st
 import pickle
+import pandas as pd
 
-# -------------------------------
-# Page Settings
-# -------------------------------
+# ----------------------------
+# Load Model
+# ----------------------------
+@st.cache_resource
+def load_model_files():
+    with open("emotion_model.pkl", "rb") as f:
+        model = pickle.load(f)
+
+    with open("vectorizer.pkl", "rb") as f:
+        vectorizer = pickle.load(f)
+
+    with open("labels.pkl", "rb") as f:
+        labels = pickle.load(f)
+
+    return model, vectorizer, labels
+
+model, vectorizer, labels = load_model_files()
+
+# ----------------------------
+# Page Configuration
+# ----------------------------
 st.set_page_config(
     page_title="AI Emotion Detector",
     page_icon="🤖",
     layout="centered"
 )
 
-# -------------------------------
-# Load AI Model
-# -------------------------------
-with open("emotion_model.pkl", "rb") as f:
-    model = pickle.load(f)
+st.title("🤖 AI Emotion Detector")
+st.write("Type any sentence below and the AI will automatically detect the emotion.")
 
-with open("vectorizer.pkl", "rb") as f:
-    vectorizer = pickle.load(f)
-
-with open("labels.pkl", "rb") as f:
-    id2label = pickle.load(f)
-
-# -------------------------------
-# Emojis
-# -------------------------------
-emoji = {
-    "joy": "😊",
-    "sadness": "😢",
-    "anger": "😡",
-    "fear": "😨",
-    "love": "❤️",
-    "surprise": "😲"
-}
-
-# -------------------------------
-# Advice
-# -------------------------------
+# ----------------------------
+# Advice Dictionary
+# ----------------------------
 advice = {
     "joy": "😊 Keep smiling! Share your happiness with someone today.",
     "sadness": "💙 It's okay to feel sad sometimes. Take a short break, listen to music, or talk to someone you trust.",
@@ -46,118 +44,111 @@ advice = {
     "surprise": "😄 Life is full of unexpected moments. Stay curious and enjoy the adventure!"
 }
 
-# -------------------------------
-# AI Explanation
-# -------------------------------
+# ----------------------------
+# Explanation Dictionary
+# ----------------------------
 explanation = {
-    "joy": "The sentence contains positive or exciting words that usually express happiness.",
-    "sadness": "The sentence contains words related to disappointment, loss, or sadness.",
-    "anger": "The sentence includes words associated with frustration or anger.",
-    "fear": "The sentence suggests worry, nervousness, or fear.",
-    "love": "The sentence expresses affection, care, or appreciation.",
-    "surprise": "The sentence contains expressions of shock or something unexpected."
+    "joy": "This sentence contains positive words that usually express happiness or excitement.",
+    "sadness": "This sentence contains words related to sadness or disappointment.",
+    "anger": "This sentence expresses frustration or anger.",
+    "fear": "This sentence contains words that indicate worry or fear.",
+    "love": "This sentence expresses affection or caring feelings.",
+    "surprise": "This sentence expresses unexpected feelings or amazement."
 }
 
-# -------------------------------
-# Background Color Function
-# -------------------------------
-def set_background(emotion):
-    colors = {
-        "joy": "#FFF9C4",
-        "sadness": "#BBDEFB",
-        "anger": "#FFCDD2",
-        "fear": "#E1BEE7",
-        "love": "#F8BBD0",
-        "surprise": "#FFE0B2"
-    }
-
-    color = colors.get(emotion, "#FFFFFF")
-
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-color: {color};
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# -------------------------------
+# ----------------------------
 # Prediction History
-# -------------------------------
+# ----------------------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# -------------------------------
-# Title
-# -------------------------------
-st.title("🤖 AI Emotion Detector")
+# ----------------------------
+# User Input (wrapped in a form so pressing Enter submits it)
+# ----------------------------
+with st.form(key="emotion_form"):
+    user_input = st.text_input(
+        "✍️ Enter your sentence:",
+        placeholder="Example: I am so happy today!"
+    )
+    submitted = st.form_submit_button("Enter")
 
-st.write("Type any sentence below and let AI predict the emotion.")
+# ----------------------------
+# Automatic Prediction
+# ----------------------------
+if submitted:
 
-text = st.text_area(
-    "Enter your sentence:",
-    placeholder="Example: I got a new laptop today and I'm very excited!"
-)
+    if user_input.strip():
 
-# -------------------------------
-# Detect Emotion
-# -------------------------------
-if st.button("🔍 Detect Emotion"):
-
-    if text.strip() == "":
-        st.warning("Please enter a sentence.")
-
-    else:
-
-        vector = vectorizer.transform([text])
+        vector = vectorizer.transform([user_input])
 
         prediction = model.predict(vector)[0]
-
         probabilities = model.predict_proba(vector)[0]
 
-        confidence = max(probabilities)
+        emotion = labels[prediction]
+        confidence = probabilities.max()
 
-        emotion = id2label[prediction]
+        # Emotion
+        st.subheader(f"😊 Emotion: {emotion.capitalize()}")
 
-        set_background(emotion)
+        # Confidence
+        st.subheader("📈 Confidence")
+        st.progress(int(confidence * 100))
+        st.write(f"**{confidence:.2%}**")
 
-        st.success(f"{emoji[emotion]} Emotion: **{emotion.upper()}**")
-
-        st.write("### Confidence")
-        st.progress(float(confidence))
-        st.write(f"**{confidence*100:.2f}%**")
-
+        # Advice
         st.subheader("💡 AI Advice")
-        st.info(advice[emotion])
+        st.info(advice.get(emotion, "Stay positive and take care of yourself."))
 
+        # Explanation
         st.subheader("🧠 AI Explanation")
-        st.write(explanation[emotion])
+        st.write(explanation.get(emotion, ""))
 
+        # Emotion Scores
         st.subheader("📊 Emotion Scores")
 
-        for i, score in enumerate(probabilities):
-            st.write(f"{emoji[id2label[i]]} **{id2label[i].title()}**")
-            st.progress(float(score))
+        for label, score in zip(labels, probabilities):
 
-        # Save prediction history
-        st.session_state.history.append({
-            "Sentence": text,
-            "Emotion": f"{emoji[emotion]} {emotion.title()}",
-            "Confidence": f"{confidence*100:.2f}%"
-        })
+            emoji = {
+                "joy": "😊",
+                "sadness": "😢",
+                "anger": "😡",
+                "fear": "😨",
+                "love": "❤️",
+                "surprise": "😲"
+            }.get(label, "🙂")
 
-# -------------------------------
-# Show History
-# -------------------------------
+            st.write(f"{emoji} **{label.capitalize()}**")
+            st.progress(int(score * 100))
+
+        # Save History
+        result = {
+            "Sentence": user_input,
+            "Emotion": emotion.capitalize(),
+            "Confidence": f"{confidence:.2%}"
+        }
+
+        if (
+            len(st.session_state.history) == 0
+            or st.session_state.history[-1]["Sentence"] != user_input
+        ):
+            st.session_state.history.append(result)
+
+# ----------------------------
+# Prediction History
+# ----------------------------
 if st.session_state.history:
 
     st.subheader("📜 Prediction History")
 
-    st.table(st.session_state.history)
+    df = pd.DataFrame(st.session_state.history)
+    st.table(df)
 
     if st.button("🗑️ Clear History"):
         st.session_state.history = []
         st.rerun()
+
+# ----------------------------
+# Footer
+# ----------------------------
+st.markdown("---")
+st.caption("Made with ❤️ by Maria Hassan Mohamed | AI Emotion Detector | 2026")
