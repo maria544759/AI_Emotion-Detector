@@ -12,7 +12,7 @@ with open("vectorizer.pkl", "rb") as f:
     vectorizer = pickle.load(f)
 
 with open("labels.pkl", "rb") as f:
-    label_encoder = pickle.load(f)
+    labels = pickle.load(f)
 
 # ----------------------------
 # Page Configuration
@@ -74,7 +74,7 @@ if user_input.strip():
     prediction = model.predict(vector)[0]
     probabilities = model.predict_proba(vector)[0]
 
-    emotion = label_encoder[prediction]
+    emotion = labels[prediction]
     confidence = probabilities.max()
 
     # Emotion
@@ -96,7 +96,8 @@ if user_input.strip():
     # Emotion Scores
     st.subheader("📊 Emotion Scores")
 
-   for label, score in zip(label_encoder, probabilities):
+    for label, score in zip(labels, probabilities):
+
         emoji = {
             "joy": "😊",
             "sadness": "😢",
@@ -116,7 +117,10 @@ if user_input.strip():
         "Confidence": f"{confidence:.2%}"
     }
 
-    if len(st.session_state.history) == 0 or st.session_state.history[-1]["Sentence"] != user_input:
+    if (
+        len(st.session_state.history) == 0
+        or st.session_state.history[-1]["Sentence"] != user_input
+    ):
         st.session_state.history.append(result)
 
 # ----------------------------
