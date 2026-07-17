@@ -74,7 +74,7 @@ if user_input.strip():
     prediction = model.predict(vector)[0]
     probabilities = model.predict_proba(vector)[0]
 
-    emotion = label_encoder.inverse_transform([prediction])[0]
+    emotion = label_encoder[prediction]
     confidence = probabilities.max()
 
     # Emotion
@@ -96,7 +96,7 @@ if user_input.strip():
     # Emotion Scores
     st.subheader("📊 Emotion Scores")
 
-    for label, score in zip(label_encoder.classes_, probabilities):
+   for label, score in zip(label_encoder, probabilities):
         emoji = {
             "joy": "😊",
             "sadness": "😢",
