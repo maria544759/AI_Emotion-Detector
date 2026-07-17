@@ -188,9 +188,6 @@ if submitted:
         st.markdown('<div class="section-label">Advice</div>', unsafe_allow_html=True)
         st.write(advice.get(emotion, "Stay positive and take care of yourself."))
 
-        st.markdown('<div class="section-label">Why</div>', unsafe_allow_html=True)
-        st.write(explanation.get(emotion, ""))
-
         st.markdown('<div class="section-label">Emotion Breakdown</div>', unsafe_allow_html=True)
         for label, score in zip(labels, probabilities):
             st.markdown(
